@@ -17,6 +17,7 @@ import ants
 from tqdm import tqdm
 import pandas as pd
 import requests
+import shutil
 def buildArgsParser():
     p = argparse.ArgumentParser(
         description=__doc__,
