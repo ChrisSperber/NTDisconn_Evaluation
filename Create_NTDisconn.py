@@ -78,7 +78,7 @@ def main():
 
     tck_file = "HCP422_2_million.tck"
     if os.path.isfile(tck_file):
-        print("Tactogram exisitng")
+        print("Tactogram exists")
     else:
         print("Downloading Tractogram...........")
         osf_url = "https://osf.io/download/nduwc/"
@@ -94,16 +94,16 @@ def main():
     if os.path.isfile('MNI_to_HCPA_Warp.nii.gz'):
         print("Coregistration MNI to HCPA done")
     else:
+        print("Coregistration MNI to HCPA .....")
         mi = ants.image_read("MNI152_T1_1mm.nii.gz")
         fi = ants.image_read(reference)
         tx = ants.registration(fixed=fi, moving=mi, type_of_transform='SyN')
         forwardtrans = tx['fwdtransforms']
         shutil.copyfile(forwardtrans[1], "MNI_to_HCPA.mat")
         shutil.copyfile(forwardtrans[0], "MNI_to_HCPA_Warp.nii.gz")
+        print("Coregistration done!)
 
         
-    
-    
     if os.path.isfile(out_NT_disc) == True:
         print("disc sl already calculated")
     else:
