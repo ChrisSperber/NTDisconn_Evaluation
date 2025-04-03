@@ -89,7 +89,19 @@ def main():
                 bar.update(len(chunk))
         print("Download complete!")
        
+    ### Create Warpfield for MNI to HCPA transformation
+    if os.path.isfile('MNI_to_HCPA_Warp.nii.gz'):
+        print("Coregistration MNI to HCPA done")
+    else:
+        mi = ants.image_read("MNI152_T1_1mm.nii.gz")
+        fi = ants.image_read(reference)
+        tx = ants.registration(fixed=fi, moving=mi, type_of_transform='SyN')
+        forwardtrans = tx['fwdtransforms']
+        shutil.copyfile(forwardtrans[1], "MNI_to_HCPA.mat")
+        shutil.copyfile(forwardtrans[0], "MNI_to_HCPA_Warp.nii.gz")
 
+        
+    
     
     if os.path.isfile(out_NT_disc) == True:
         print("disc sl already calculated")
