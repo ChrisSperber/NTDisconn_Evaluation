@@ -8,8 +8,7 @@ Neurotransmitter Density maps
 Hansen et al. 2022: https://pubmed.ncbi.nlm.nih.gov/36303070/
 
 
-1. Required repositories
-&nbsp;&nbsp;&nbsp;&nbsp;nibabel  
+1. Required repositories  
 &nbsp;&nbsp;&nbsp;&nbsp;nibabel  
 &nbsp;&nbsp;&nbsp;&nbsp;scipy  
 &nbsp;&nbsp;&nbsp;&nbsp;dipy  
