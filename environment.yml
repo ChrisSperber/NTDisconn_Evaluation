@@ -1,0 +1,14 @@
+name: ntdisconn
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python==3.10
+  - nibabel
+  - scipy
+  - dipy
+  - pandas
+  - numpy==2.0.1
+  - pyyaml
+  - pip:
+    - antspyx
