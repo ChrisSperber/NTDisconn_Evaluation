@@ -8,21 +8,28 @@ Neurotransmitter Density maps
 Hansen et al. 2022: https://pubmed.ncbi.nlm.nih.gov/36303070/
 
 
-1. Required repositories   
+1. Required repositories
+&nbsp;&nbsp;&nbsp;&nbsp;nibabel  
 &nbsp;&nbsp;&nbsp;&nbsp;nibabel  
 &nbsp;&nbsp;&nbsp;&nbsp;scipy  
 &nbsp;&nbsp;&nbsp;&nbsp;dipy  
 &nbsp;&nbsp;&nbsp;&nbsp;antspyx  
-&nbsp;&nbsp;&nbsp;&nbsp;pandas  
+&nbsp;&nbsp;&nbsp;&nbsp;pandas
+&nbsp;&nbsp;&nbsp;&nbsp;alternative: activate the given environment (s. 3.)
 
-2. Clone the repository
+3. Clone the repository
 ```bash
 git clone https://github.com/phjkoch/NTDisconn.git
 cd NTDisconn
 ```
 
+3. Activate Enviornment
+```bash
+conda env create -f environment.yml
+conda activate ntdisconn
+```
 
-3. Usage
+4. Usage
 
 ```bash
 python Create_NTDisconn.py --help
@@ -41,13 +48,13 @@ python Create_NTDisconn.py --help
 &nbsp;&nbsp;&nbsp;--discStreamlines DISCSTREAMLINES
                     Create disconnected streamline output? [y|n]
 
-4. Output  
+5. Output  
 &nbsp;&nbsp;&nbsp;In the output_dir a directory named after the ID is created containing  
 &nbsp;&nbsp;&nbsp;1. A csv file with the estimated Neurotransmitter network damage of the individual lesion map for all the Neurotransmitter receptors and transporters from Hansen et al. 2022  
 &nbsp;&nbsp;&nbsp;2. A txt file with 2 millionen entries indicating which streamlines of the HCP-aging tractogram is passing through the individual lesion mask [1] and which are sparsed [0] (optional)
 
 
-5. Test_MNI_lesion.nii.gz
+6. Test_MNI_lesion.nii.gz
 This is a test lesion when used correctly like:
 ```bash
 python Create_NTDisconn.py Test Test_MNI_lesion.nii.gz output_test
