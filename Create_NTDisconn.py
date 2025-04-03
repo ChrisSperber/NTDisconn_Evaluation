@@ -101,7 +101,7 @@ def main():
         forwardtrans = tx['fwdtransforms']
         shutil.copyfile(forwardtrans[1], "MNI_to_HCPA.mat")
         shutil.copyfile(forwardtrans[0], "MNI_to_HCPA_Warp.nii.gz")
-        print("Coregistration done!)
+        print("Coregistration done!")
 
         
     if os.path.isfile(out_NT_disc) == True:
