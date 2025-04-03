@@ -23,7 +23,7 @@ git clone https://github.com/phjkoch/NTDisconn.git
 cd NTDisconn
 ```
 
-3. Activate Enviornment
+3. Activate Environment
 ```bash
 conda env create -f environment.yml
 conda activate ntdisconn
