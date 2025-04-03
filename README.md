@@ -46,7 +46,7 @@ python Create_NTDisconn.py --help
 &nbsp;&nbsp;&nbsp;&nbsp;optional arguemnts:  
 &nbsp;&nbsp;&nbsp;-h, --help            show this help message and exit  
 &nbsp;&nbsp;&nbsp;--discStreamlines DISCSTREAMLINES
-                    Create disconnected streamline output? [y|n]
+                    Create disconnected streamline output? [y|n] (default: y)
 
 5. Output  
 &nbsp;&nbsp;&nbsp;In the output_dir a directory named after the ID is created containing  
