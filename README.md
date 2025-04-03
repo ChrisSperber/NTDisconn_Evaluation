@@ -14,7 +14,7 @@ Hansen et al. 2022: https://pubmed.ncbi.nlm.nih.gov/36303070/
 &nbsp;&nbsp;&nbsp;&nbsp;scipy  
 &nbsp;&nbsp;&nbsp;&nbsp;dipy  
 &nbsp;&nbsp;&nbsp;&nbsp;antspyx  
-&nbsp;&nbsp;&nbsp;&nbsp;pandas
+&nbsp;&nbsp;&nbsp;&nbsp;pandas  
 &nbsp;&nbsp;&nbsp;&nbsp;alternative: activate the given environment (s. 3.)
 
 3. Clone the repository
