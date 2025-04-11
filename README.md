@@ -3,10 +3,10 @@ Create Neurotransmitter Network Damage
 
 This work is based on the following and distributed under the CC BY-NC-SA 4.0 License:  
 Please cite the following when using this code  
-Population based Tractogram:    
+- Population based Tractogram:    
 [Xiao et al. 2023](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10474320/)    
 [This data is available here](https://osf.io/p7syt/)  
-Neurotransmitter Density maps:    
+- Neurotransmitter Density maps:    
 [Hansen et al. 2022](https://pubmed.ncbi.nlm.nih.gov/36303070/)  
 [Git Repository](https://github.com/netneurolab/hansen_receptors/tree/main)  
 
