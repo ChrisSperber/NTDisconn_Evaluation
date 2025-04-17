@@ -50,9 +50,9 @@ python Create_NTDisconn.py --help
 &nbsp;&nbsp;&nbsp;&nbsp;optional arguments:  
 &nbsp;&nbsp;&nbsp;-h, --help            show this help message and exit  
 &nbsp;&nbsp;&nbsp;--discStreamlines DISCSTREAMLINES
-                    Create disconnected streamline output? [y|n] (default: y)
+                    Create disconnected streamline output? [y|n] (default: y)  
 &nbsp;&nbsp;&nbsp;--NTmaps MAPS
-                    Chose which NT maps to use (Z-values vs. Percentage)? [Z|Zpos] (default: Zpos)                    
+                    Choose which NT maps to use (Z-values vs. Percentage)? [Z|Percent] (default: Percent)                    
 
 5. Output  
 &nbsp;&nbsp;&nbsp;In the output_dir a directory named after the ID is created containing  
