@@ -34,8 +34,8 @@ def buildArgsParser():
                    help='Specify output directory')
     p.add_argument('--discStreamlines', default='y',
                    help='Create disconnected streamline output? [y|n]')
-    p.add_argument('--NTmaps', default='Z_pos',
-                   help='Which NT maps to use? [Z|Z_pos]')
+    p.add_argument('--NTmaps', default='Percent',
+                   help='Which NT maps to use? [Z|Percent]')
     #p.add_argument('--Connectome', default='y',
     #               help='Create Connectome output? [y|n]')
 
@@ -150,7 +150,7 @@ def main():
             nt_weights = weights_tractogram * gtmap
             np.savetxt("tmp_disc.txt", nt_weights)
 
-            if args.NTmaps == 'Z_pos':
+            if args.NTmaps == 'Percent':
                 d[neurotrans] = np.sum(nt_weights)/np.sum(gtmap)
 
             if args.NTmaps == 'Z':
