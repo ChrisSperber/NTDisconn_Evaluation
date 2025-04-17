@@ -2,9 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-#### Population based Tractogram: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10474320/
-
-
 from __future__ import division
 import argparse
 import nibabel as nib
@@ -18,6 +15,7 @@ from tqdm import tqdm
 import pandas as pd
 import requests
 import shutil
+
 def buildArgsParser():
     p = argparse.ArgumentParser(
         description=__doc__,
@@ -141,7 +139,7 @@ def main():
         print("Evaluate NT systems......................")
         for neurotrans in ["5HT1a_way_hc36_savli", "5HT1b_p943_hc65_gallezot", "5HT2a_cimbi_hc29_beliveau", "5HT4_sb20_hc59_beliveau", "5HT6_gsk_hc30_radhakrishnan", "5HTT_dasb_hc100_beliveau", "D1_SCH23390_hc13_kaller", "D2_flb457_hc37_smith", "DAT_fpcit_hc174_dukart_spect", "A4B2_flubatine_hc30_hillmer", "VAChT_feobv_hc18_aghourian_sum", "mGluR5_abp_hc22_rosaneto", "GABAa-bz_flumazenil_hc16_norgaard", "NAT_MRB_hc77_ding", "H3_cban_hc8_gallezot", "M1_lsn_hc24_naganawa", "CB1_omar_hc77_normandin", "NMDA_ge179_hc29_galovic", "MU_carfentanil_hc204_kantonen"]:
             print(neurotrans)
-            in_neurotrans_weights = os.path.join("HCP_NT", args.NTmaps,neurotrans,
+            in_neurotrans_weights = os.path.join("HCP_NT", args.NTmaps, neurotrans,
                                                  "GT_" + neurotrans + "_weights_disc_Tractogram.txt")
             out_connect = os.path.join(args.output_dir, args.ID + "_" + neurotrans + "_Diconnectome.csv")
             #out_connect_pres = os.path.join(args.output_dir, args.in_neurotrans + "_Preserved_Connectome.csv")
@@ -166,6 +164,7 @@ def main():
                 tck2connectome_cmd = "tck2connectome HCP422_2_million.tck BN_Atlas_277_05mm_HCPA.nii.gz " + out_connect + " -tck_weights_in tmp_disc.txt --assignment_radial_search 4 -symmetric -f"  # -zero_diagonal
                 subprocess.call(tck2connectome_cmd, shell=True)
             '''
+        
         df = pd.DataFrame(d, index=[0])
         df.to_csv(out_NT_disc)
 
