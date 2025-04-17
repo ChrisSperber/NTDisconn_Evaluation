@@ -1,7 +1,8 @@
 # NTDisconn
-Create Neurotransmitter Network Damage
+Create Neurotransmitter Network Damage  
 NTDisconn ©️ 2025 by Philipp J. Koch is licensed under CC BY-NC-SA 4.0  
 [https://creativecommons.org/licenses/by-nc-sa/4.0](https://creativecommons.org/licenses/by-nc-sa/4.0)  
+
 This work is based on the following and distributed under the CC BY-NC-SA 4.0 License:  
 Please cite the following when using this code  
 - Population based Tractogram:    
