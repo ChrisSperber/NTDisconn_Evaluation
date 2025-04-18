@@ -104,8 +104,12 @@ def main():
         print("Coregistration done!")
 
         
-    if os.path.isfile(out_NT_disc) == True:
+    out_weights_tractogram_disc = os.path.join(args.output_dir,
+                                                   args.ID + "_Disc_Streamlines.txt")
+    
+    if os.path.isfile(out_weights_tractogram_disc) == True:
         print("disc sl already calculated")
+        weights_tractogram = np.loadtxt(out_weights_tractogram_disc)
     else:
 
         print("Loading streamlines ##########################################")
@@ -128,11 +132,15 @@ def main():
 
         weights_tractogram = define_streamlines(streamlines, lesion, nib.load(reference))
 
-        out_weights_tractogram_disc = os.path.join(args.output_dir,
-                                                   args.ID + "_Disc_Streamlines.txt")
+        
         if args.discStreamlines == 'y':
             np.savetxt(out_weights_tractogram_disc, weights_tractogram)
 
+        
+    if os.path.isfile(out_NT_disc) == True:
+        print("NT Disc already calculated")
+    else:
+    
         d = {}
         d["ID"] = args.ID
         d["Disc_SL"] = np.sum(weights_tractogram)
@@ -143,7 +151,8 @@ def main():
                                                  "GT_" + neurotrans + "_weights_disc_Tractogram.txt")
             out_connect = os.path.join(args.output_dir, args.ID + "_" + neurotrans + "_Diconnectome.csv")
             #out_connect_pres = os.path.join(args.output_dir, args.in_neurotrans + "_Preserved_Connectome.csv")
-
+            
+            
             gtmap = np.loadtxt(in_neurotrans_weights)
             nt_weights = weights_tractogram * gtmap
             np.savetxt("tmp_disc.txt", nt_weights)
