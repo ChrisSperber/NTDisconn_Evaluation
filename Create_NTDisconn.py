@@ -47,7 +47,7 @@ def main():
 
 
     reference = "HCPA422-T1w-500um-norm.nii.gz"
-    out_NT_disc = os.path.join(args.output_dir, args.ID +"_NT_Diconnect.csv")
+    out_NT_disc = os.path.join(args.output_dir, args.ID +"_NT_Diconnect_"+args.NTmaps+".csv")
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
