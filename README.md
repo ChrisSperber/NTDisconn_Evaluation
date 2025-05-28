@@ -5,6 +5,8 @@ NTDisconn ©️ 2025 by Philipp J. Koch is licensed under CC BY-NC-SA 4.0
 
 This work is based on the following and distributed under the CC BY-NC-SA 4.0 License:  
 Please cite the following when using this code  
+- Neurotransmitter informed Network Damage for stroke outcome:   
+[Koch and Frey et al. 2025](https://pubmed.ncbi.nlm.nih.gov/40392973/) (https://pubmed.ncbi.nlm.nih.gov/40392973/) 
 - Population based Tractogram:    
 [Xiao et al. 2023](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10474320/) (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10474320/)      
 [This data is available here](https://osf.io/p7syt/) (https://osf.io/p7syt/)    
