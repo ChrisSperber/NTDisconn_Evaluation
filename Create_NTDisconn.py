@@ -34,8 +34,6 @@ def buildArgsParser():
                    help='Create disconnected streamline output? [y|n]')
     p.add_argument('--NTmaps', default='Percent',
                    help='Which NT maps to use? [Z|Percent]')
-    p.add_argument('--NTmaps', default='Percent',
-                   help='Which NT maps to use? [Z|Percent]')
     p.add_argument('--filter', default='n',
                    help='Filter Streamlines - enter percentile [50|75|n]')
 
