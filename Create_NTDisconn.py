@@ -34,8 +34,10 @@ def buildArgsParser():
                    help='Create disconnected streamline output? [y|n]')
     p.add_argument('--NTmaps', default='Percent',
                    help='Which NT maps to use? [Z|Percent]')
-    #p.add_argument('--Connectome', default='y',
-    #               help='Create Connectome output? [y|n]')
+    p.add_argument('--NTmaps', default='Percent',
+                   help='Which NT maps to use? [Z|Percent]')
+    p.add_argument('--filter', default='n',
+                   help='Filter Streamlines - enter percentile [50|75|n]')
 
 
     return p
@@ -154,6 +156,13 @@ def main():
             
             
             gtmap = np.loadtxt(in_neurotrans_weights)
+
+            ####### filter by percentile ######
+            if args.filter != 'n':
+                cutoff = cutoff = np.percentile(data_array, args.filter)
+                gtmap[gtmap<cutoff] = 0
+            ###################################
+            
             nt_weights = weights_tractogram * gtmap
             np.savetxt("tmp_disc.txt", nt_weights)
 
