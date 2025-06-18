@@ -35,7 +35,7 @@ def buildArgsParser():
     p.add_argument('--NTmaps', default='Percent',
                    help='Which NT maps to use? [Z|Percent]')
     p.add_argument('--filter', default='n',
-                   help='Filter Streamlines - enter percentile [50|75|n]')
+                   help='Filter Streamlines - enter percentile [y|n]')
 
 
     return p
@@ -157,7 +157,7 @@ def main():
 
             ####### filter by percentile ######
             if args.filter != 'n':
-                cutoff = cutoff = np.percentile(gtmap, args.filter)
+                cutoff = cutoff = np.percentile(gtmap, 75)
                 gtmap[gtmap<cutoff] = 0
             ###################################
             
