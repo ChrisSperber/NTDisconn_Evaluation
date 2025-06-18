@@ -157,7 +157,7 @@ def main():
 
             ####### filter by percentile ######
             if args.filter != 'n':
-                cutoff = cutoff = np.percentile(data_array, args.filter)
+                cutoff = cutoff = np.percentile(gtmap, args.filter)
                 gtmap[gtmap<cutoff] = 0
             ###################################
             
