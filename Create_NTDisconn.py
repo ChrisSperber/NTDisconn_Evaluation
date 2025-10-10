@@ -97,7 +97,7 @@ def main():
         print("Coregistration MNI to HCPA .....")
         mi = ants.image_read("MNI152_T1_1mm.nii.gz")
         fi = ants.image_read(reference)
-        tx = ants.registration(fixed=fi, moving=mi, type_of_transform='SyN')
+        tx = ants.registration(fixed=fi, moving=mi, type_of_transform='SyN', random_seed=1, singleprecision=False)
         forwardtrans = tx['fwdtransforms']
         shutil.copyfile(forwardtrans[1], "MNI_to_HCPA.mat")
         shutil.copyfile(forwardtrans[0], "MNI_to_HCPA_Warp.nii.gz")
