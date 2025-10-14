@@ -95,6 +95,7 @@ def main():
         print("Coregistration MNI to HCPA done")
     else:
         print("Coregistration MNI to HCPA .....")
+        os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS'] = "1"
         mi = ants.image_read("MNI152_T1_1mm.nii.gz")
         fi = ants.image_read(reference)
         tx = ants.registration(fixed=fi, moving=mi, type_of_transform='SyN', random_seed=1, singleprecision=False)
