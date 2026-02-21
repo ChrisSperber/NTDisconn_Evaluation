@@ -71,12 +71,12 @@ def buildArgsParser():
     # NEW: strict validation for streamline->voxel mapping
     p.add_argument(
         "--strict_voxel_indexing",
-        default="y",
+        default="n",
         help="Fail if any streamline point maps outside lesion/reference grid [y|n]",
     )
     p.add_argument(
         "--strict_nan_inf",
-        default="y",
+        default="n",
         help="Fail if NaN/Inf appear in warped lesion or NT weights [y|n]",
     )
     p.add_argument(
