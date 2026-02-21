@@ -38,6 +38,36 @@ def buildArgsParser():
         help="Filter Streamlines - enter percentile [y|n]",
     )
 
+    # NEW: optional hotspot-emphasizing transform of per-streamline NT weights (gtmap)
+    #
+    # If provided, this value is used as the robust-z threshold "t" in:
+    #   z = (x - median(x)) / (1.4826 * MAD(x))
+    #   w = sigmoid(alpha * (z - t))
+    #
+    # Intuition:
+    #   - larger t -> only strong "hotspot" weights remain influential
+    #   - smaller t -> more weights contribute (closer to original behavior)
+    #
+    # Suggested starting points:
+    #   t=1.0  mild hotspot emphasis
+    #   t=1.5  moderate (good first try)
+    #   t=2.0  strong
+    #
+    # IMPORTANT:
+    #   This transform is only supported in --NTmaps Percent mode (proportion-style output).
+    #   If --NTmaps Z is used together with this option, the script will fail.
+    p.add_argument(
+        "--nt_hotspot_t",
+        type=float,
+        default=None,
+        help=(
+            "Optional robust-sigmoid hotspot transform for gtmap weights. "
+            "Provide threshold t (float) in robust-z units. "
+            "Examples: 1.0 (mild), 1.5 (moderate), 2.0 (strong). "
+            "Only valid with --NTmaps Percent; will error for --NTmaps Z."
+        ),
+    )
+
     # NEW: strict validation for streamline->voxel mapping
     p.add_argument(
         "--strict_voxel_indexing",
@@ -73,6 +103,72 @@ def _check_no_nan_inf(arr: np.ndarray, name: str) -> None:
         _fail(f"[{name}] contains non-finite values: NaN={n_nan}, Inf={n_inf}")
 
 
+def _transform_gtmap_robust_sigmoid(
+    gtmap: np.ndarray,
+    t: float,
+    *,
+    alpha: float = 3.0,
+    eps: float = 1e-12,
+) -> np.ndarray:
+    """
+    Robust hotspot emphasis for a per-streamline NT weight vector.
+
+    Steps:
+      1) robust z-score using median and MAD:
+           z = (x - median(x)) / (1.4826 * MAD(x))
+         where MAD = median(|x - median(x)|)
+
+      2) sigmoid squashing to (0, 1):
+           w = 1 / (1 + exp(-alpha * (z - t)))
+
+    Notes:
+      - output weights are strictly non-negative and bounded, suitable for proportion scoring:
+            sum(disconnected*w) / sum(w)
+      - t controls how selective the transform is (higher t => stronger hotspot focus)
+      - alpha controls steepness (fixed here; keep alpha constant and tune t)
+
+    Parameters
+    ----------
+    gtmap : np.ndarray
+        Raw weights (1D).
+    t : float
+        Threshold in robust-z units. Suggested: 1.0, 1.5, 2.0
+    alpha : float
+        Sigmoid steepness. Default 3.0.
+    eps : float
+        Numerical epsilon for degenerate distributions.
+
+    Returns
+    -------
+    np.ndarray
+        Transformed weights in (0, 1), same shape as gtmap.
+    """
+    x = np.asarray(gtmap, dtype=np.float64)
+    if x.ndim != 1:
+        raise ValueError(f"gtmap must be 1D, got shape {x.shape}")
+    if not np.isfinite(x).all():
+        raise ValueError("gtmap contains NaN/Inf")
+
+    med = np.median(x)
+    mad = np.median(np.abs(x - med))
+    scale = 1.4826 * mad
+
+    # If the distribution is (almost) constant, hotspot emphasis is undefined.
+    # Fall back to uniform positive weights so the downstream proportion reduces to
+    # disconnected fraction for this NT (i.e., no NT-specific weighting signal).
+    if not np.isfinite(scale) or scale < eps:
+        return np.ones_like(x, dtype=np.float64)
+
+    z = (x - med) / scale
+    w = 1.0 / (1.0 + np.exp(-float(alpha) * (z - float(t))))
+
+    # Safety: avoid pathological all-zero sum (shouldn't happen with sigmoid, but keep robust)
+    if float(np.sum(w)) <= 0.0:
+        return np.ones_like(x, dtype=np.float64)
+
+    return w
+
+
 def main():
     parser = buildArgsParser()
     args = parser.parse_args()
@@ -88,11 +184,19 @@ def main():
     strict_voxel = args.strict_voxel_indexing.lower() == "y"
     strict_nan_inf = args.strict_nan_inf.lower() == "y"
 
+    # Enforce: hotspot transform only supported in Percent mode
+    if args.nt_hotspot_t is not None and args.NTmaps != "Percent":
+        _fail(
+            "--nt_hotspot_t was provided, but --NTmaps is not 'Percent'. "
+            "The hotspot transform is only implemented for proportion-style output (--NTmaps Percent). "
+            "Please switch to --NTmaps Percent or omit --nt_hotspot_t."
+        )
+
     def define_streamlines(streamlines, lesion, reference_img):
         """
         Return a 0/1 array indicating whether each streamline intersects the lesion.
 
-        NEW safety checks (when enabled):
+        Safety checks (when enabled):
           - fail on negative indices
           - fail on indices >= shape
           - optionally allow a tiny fraction of OOB points via --max_oob_fraction
@@ -112,13 +216,10 @@ def main():
                 "Fix by iterating over range(len(streamlines)) or use the correct tractogram."
             )
 
-        # Pre-allocate for speed and to guarantee ndarray output
         metric = np.zeros(n_streamlines_expected, dtype=np.float32)
 
-        # Cache bounds
         nx, ny, nz = les.shape[:3]
 
-        # Tracking for diagnostics
         total_points = 0
         oob_points = 0
         neg_points = 0
@@ -140,7 +241,6 @@ def main():
             n_pts = int(len(x))
             total_points += n_pts
 
-            # Bounds checks
             neg_mask = (x < 0) | (y < 0) | (z < 0)
             high_mask = (x >= nx) | (y >= ny) | (z >= nz)
             oob_mask = neg_mask | high_mask
@@ -156,7 +256,6 @@ def main():
             if strict_voxel and n_oob > 0:
                 frac = n_oob / float(n_pts) if n_pts > 0 else 0.0
                 if frac > args.max_oob_fraction:
-                    # Provide a few example coordinates for debugging
                     bad_idx = np.where(oob_mask)[0][:5]
                     examples = [(int(x[i]), int(y[i]), int(z[i])) for i in bad_idx]
                     _fail(
@@ -170,11 +269,9 @@ def main():
                         "or due to streamline points outside the image FOV."
                     )
 
-            # If not strict, just ignore OOB points (safe alternative)
             if n_oob > 0:
                 keep = ~oob_mask
                 if not np.any(keep):
-                    # no valid points -> cannot intersect
                     continue
                 xk = x[keep]
                 yk = y[keep]
@@ -182,20 +279,16 @@ def main():
             else:
                 xk, yk, zk = x, y, z
 
-            # Intersection
             if np.sum(les[xk, yk, zk]) > 0:
                 metric[s] = 1.0
 
-        if strict_voxel:
-            # In strict mode, we already failed per-streamline if beyond threshold.
-            # Still summarize in case max_oob_fraction was >0.
-            if total_points > 0:
-                frac_oob = oob_points / float(total_points)
-                print(
-                    f"[VOXEL QC] total_points={total_points} "
-                    f"oob_points={oob_points} (frac={frac_oob:.6e}) "
-                    f"neg_points={neg_points} high_points={high_points}"
-                )
+        if strict_voxel and total_points > 0:
+            frac_oob = oob_points / float(total_points)
+            print(
+                f"[VOXEL QC] total_points={total_points} "
+                f"oob_points={oob_points} (frac={frac_oob:.6e}) "
+                f"neg_points={neg_points} high_points={high_points}"
+            )
 
         return metric
 
@@ -232,7 +325,6 @@ def main():
             singleprecision=False,
         )
         forwardtrans = tx["fwdtransforms"]
-        # Persist in the order ANTsPy produced
         shutil.copyfile(forwardtrans[1], "MNI_to_HCPA.mat")
         shutil.copyfile(forwardtrans[0], "MNI_to_HCPA_Warp.nii.gz")
         print("Coregistration done!")
@@ -325,38 +417,40 @@ def main():
         if strict_nan_inf:
             _check_no_nan_inf(gtmap, f"gtmap[{neurotrans}]")
 
-        # filter by percentile (kept behavior; removed duplicated assignment)
+        # filter by percentile (fixed 75th percentile if enabled)
         if args.filter != "n":
             cutoff = np.percentile(gtmap, 75)
             gtmap[gtmap < cutoff] = 0
 
-        # sanity: length must match number of streamlines evaluated
         if gtmap.shape[0] != weights_tractogram.shape[0]:
             _fail(
                 f"Length mismatch for {neurotrans}: "
                 f"gtmap has {gtmap.shape[0]} entries but weights_tractogram has {weights_tractogram.shape[0]}."
             )
 
-        nt_weights = weights_tractogram * gtmap
+        # Optional: robust hotspot emphasis (Percent mode only; enforced above)
+        if args.nt_hotspot_t is not None:
+            gtmap_w = _transform_gtmap_robust_sigmoid(
+                gtmap, t=float(args.nt_hotspot_t)
+            ).astype(np.float32)
+        else:
+            gtmap_w = gtmap
+
+        nt_weights = weights_tractogram * gtmap_w
         if strict_nan_inf:
             _check_no_nan_inf(nt_weights, f"nt_weights[{neurotrans}]")
 
-        tmp_disc_path = os.path.join(
-            args.output_dir, f"{args.ID}_tmp_disc_{neurotrans}.txt"
-        )
-        # Optional: comment out if too much I/O
-        # np.savetxt(tmp_disc_path, nt_weights)
-
         if args.NTmaps == "Percent":
-            denom = float(np.sum(gtmap))
+            denom = float(np.sum(gtmap_w))
             if denom <= 0:
                 _fail(
-                    f"Denominator is zero for {neurotrans} (sum(gtmap)={denom}). "
-                    "This can happen if filtering zeroed everything."
+                    f"Denominator is zero for {neurotrans} (sum(transformed_gtmap)={denom}). "
+                    "This can happen if filtering and/or hotspot transform removed all weight mass."
                 )
             d[neurotrans] = float(np.sum(nt_weights)) / denom
 
         elif args.NTmaps == "Z":
+            # Hotspot transform is forbidden in Z mode (enforced above).
             d[neurotrans] = float(np.sum(nt_weights))
 
         else:
