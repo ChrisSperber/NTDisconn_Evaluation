@@ -50,7 +50,7 @@ def buildArgsParser():
     #
     # Suggested starting points:
     #   t=1.0  mild hotspot emphasis
-    #   t=1.5  moderate (good first try)
+    #   t=1.5  moderate
     #   t=2.0  strong
     #
     # IMPORTANT:
@@ -107,65 +107,71 @@ def _transform_gtmap_robust_sigmoid(
     gtmap: np.ndarray,
     t: float,
     *,
+    name: str = "gtmap",
     alpha: float = 3.0,
     eps: float = 1e-12,
+    zero_eps: float = 0.0,  # treat <= zero_eps as "zero"
 ) -> np.ndarray:
     """
-    Robust hotspot emphasis for a per-streamline NT weight vector.
+    Robust hotspot emphasis for sparse NT weights (many zeros + tail).
 
-    Steps:
-      1) robust z-score using median and MAD:
-           z = (x - median(x)) / (1.4826 * MAD(x))
-         where MAD = median(|x - median(x)|)
+    Key idea:
+      - If many weights are exactly 0, MAD around the global median can be 0.
+      - In that case, standardize using the *non-zero* subset only.
+      - Keep zeros exactly zero after transform.
 
-      2) sigmoid squashing to (0, 1):
-           w = 1 / (1 + exp(-alpha * (z - t)))
-
-    Notes:
-      - output weights are strictly non-negative and bounded, suitable for proportion scoring:
-            sum(disconnected*w) / sum(w)
-      - t controls how selective the transform is (higher t => stronger hotspot focus)
-      - alpha controls steepness (fixed here; keep alpha constant and tune t)
-
-    Parameters
-    ----------
-    gtmap : np.ndarray
-        Raw weights (1D).
-    t : float
-        Threshold in robust-z units. Suggested: 1.0, 1.5, 2.0
-    alpha : float
-        Sigmoid steepness. Default 3.0.
-    eps : float
-        Numerical epsilon for degenerate distributions.
-
-    Returns
-    -------
-    np.ndarray
-        Transformed weights in (0, 1), same shape as gtmap.
+    Returns weights in [0,1], suitable for proportion scoring:
+        sum(disconnected*w) / sum(w)
     """
     x = np.asarray(gtmap, dtype=np.float64)
     if x.ndim != 1:
-        raise ValueError(f"gtmap must be 1D, got shape {x.shape}")
+        raise ValueError(f"{name}: gtmap must be 1D, got shape {x.shape}")
     if not np.isfinite(x).all():
-        raise ValueError("gtmap contains NaN/Inf")
+        raise ValueError(f"{name}: gtmap contains NaN/Inf")
 
-    med = np.median(x)
-    mad = np.median(np.abs(x - med))
+    # Identify "non-zero" tail
+    nz = x > float(zero_eps)
+    n = x.size
+    n_nz = int(nz.sum())
+
+    # If essentially all-zero, there's no usable weighting signal
+    if n_nz == 0:
+        raise RuntimeError(
+            f"{name}: all weights are <= {zero_eps}; cannot apply hotspot transform."
+        )
+
+    # Compute robust center/scale on non-zero values
+    x_nz = x[nz]
+    med = np.median(x_nz)
+    mad = np.median(np.abs(x_nz - med))
     scale = 1.4826 * mad
 
-    # If the distribution is (almost) constant, hotspot emphasis is undefined.
-    # Fall back to uniform positive weights so the downstream proportion reduces to
-    # disconnected fraction for this NT (i.e., no NT-specific weighting signal).
+    # Fallback: use IQR of non-zero values if MAD is tiny (ties/discretization)
     if not np.isfinite(scale) or scale < eps:
-        return np.ones_like(x, dtype=np.float64)
+        q25, q75 = np.percentile(x_nz, [25, 75])
+        scale = float(q75 - q25)
 
-    z = (x - med) / scale
-    w = 1.0 / (1.0 + np.exp(-float(alpha) * (z - float(t))))
+    if not np.isfinite(scale) or scale < eps:
+        raise RuntimeError(
+            f"{name}: cannot apply hotspot transform; dispersion of non-zero tail is ~0 "
+            f"(n={n}, n_nonzero={n_nz}, MAD={mad:.3g}, scale={scale:.3g})."
+        )
 
-    # Safety: avoid pathological all-zero sum (shouldn't happen with sigmoid, but keep robust)
+    # Robust z for non-zero part only
+    z = (x_nz - med) / scale
+
+    # Sigmoid -> (0,1)
+    w_nz = 1.0 / (1.0 + np.exp(-float(alpha) * (z - float(t))))
+
+    # Reconstruct full vector; keep zeros exactly 0
+    w = np.zeros_like(x, dtype=np.float64)
+    w[nz] = w_nz
+
+    # Safety: ensure denominator isn't degenerate
     if float(np.sum(w)) <= 0.0:
-        return np.ones_like(x, dtype=np.float64)
-
+        raise RuntimeError(
+            f"{name}: transformed weights have zero sum; check parameters."
+        )
     return w
 
 
