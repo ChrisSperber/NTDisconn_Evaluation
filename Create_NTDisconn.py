@@ -68,6 +68,28 @@ def buildArgsParser():
         ),
     )
 
+    # NEW: subtract global disconnection burden (F) from each NT percent score
+    #
+    # In Percent mode, the base score is:
+    #   P_k = sum(disconnected * w_k) / sum(w_k)
+    #
+    # where disconnected is the 0/1 streamline disconnection mask.
+    #
+    # The global disconnection fraction is:
+    #   F = (# disconnected streamlines) / (total # streamlines)
+    #
+    # If enabled, the script outputs:
+    #   P_k - F
+    #
+    # This removes the shared component driven purely by "how many streamlines are disconnected".
+    # Note: values can become negative.
+    p.add_argument(
+        "--subtract_disc_fraction",
+        default="n",
+        help="Subtract global disconnection fraction F from each NT Percent score [y|n]. "
+        "Only valid with --NTmaps Percent.",
+    )
+
     # NEW: strict validation for streamline->voxel mapping
     p.add_argument(
         "--strict_voxel_indexing",
@@ -129,24 +151,20 @@ def _transform_gtmap_robust_sigmoid(
     if not np.isfinite(x).all():
         raise ValueError(f"{name}: gtmap contains NaN/Inf")
 
-    # Identify "non-zero" tail
     nz = x > float(zero_eps)
     n = x.size
     n_nz = int(nz.sum())
 
-    # If essentially all-zero, there's no usable weighting signal
     if n_nz == 0:
         raise RuntimeError(
             f"{name}: all weights are <= {zero_eps}; cannot apply hotspot transform."
         )
 
-    # Compute robust center/scale on non-zero values
     x_nz = x[nz]
     med = np.median(x_nz)
     mad = np.median(np.abs(x_nz - med))
     scale = 1.4826 * mad
 
-    # Fallback: use IQR of non-zero values if MAD is tiny (ties/discretization)
     if not np.isfinite(scale) or scale < eps:
         q25, q75 = np.percentile(x_nz, [25, 75])
         scale = float(q75 - q25)
@@ -157,17 +175,12 @@ def _transform_gtmap_robust_sigmoid(
             f"(n={n}, n_nonzero={n_nz}, MAD={mad:.3g}, scale={scale:.3g})."
         )
 
-    # Robust z for non-zero part only
     z = (x_nz - med) / scale
-
-    # Sigmoid -> (0,1)
     w_nz = 1.0 / (1.0 + np.exp(-float(alpha) * (z - float(t))))
 
-    # Reconstruct full vector; keep zeros exactly 0
     w = np.zeros_like(x, dtype=np.float64)
     w[nz] = w_nz
 
-    # Safety: ensure denominator isn't degenerate
     if float(np.sum(w)) <= 0.0:
         raise RuntimeError(
             f"{name}: transformed weights have zero sum; check parameters."
@@ -189,6 +202,7 @@ def main():
 
     strict_voxel = args.strict_voxel_indexing.lower() == "y"
     strict_nan_inf = args.strict_nan_inf.lower() == "y"
+    subtract_F = args.subtract_disc_fraction.lower() == "y"
 
     # Enforce: hotspot transform only supported in Percent mode
     if args.nt_hotspot_t is not None and args.NTmaps != "Percent":
@@ -196,6 +210,13 @@ def main():
             "--nt_hotspot_t was provided, but --NTmaps is not 'Percent'. "
             "The hotspot transform is only implemented for proportion-style output (--NTmaps Percent). "
             "Please switch to --NTmaps Percent or omit --nt_hotspot_t."
+        )
+
+    # Enforce: subtract F only supported in Percent mode
+    if subtract_F and args.NTmaps != "Percent":
+        _fail(
+            "--subtract_disc_fraction y was provided, but --NTmaps is not 'Percent'. "
+            "Subtracting the global disconnection fraction F is only defined for Percent mode."
         )
 
     def define_streamlines(streamlines, lesion, reference_img):
@@ -384,9 +405,15 @@ def main():
         print("NT Disc already calculated")
         return
 
+    # Global disconnection fraction F = (# disconnected streamlines) / (total # streamlines)
+    n_streamlines_total = float(weights_tractogram.shape[0])
+    disc_sl = float(np.sum(weights_tractogram))
+    F = disc_sl / n_streamlines_total if n_streamlines_total > 0 else 0.0
+
     d = {}
     d["ID"] = args.ID
-    d["Disc_SL"] = float(np.sum(weights_tractogram))
+    d["Disc_SL"] = disc_sl
+    d["Disc_Frac"] = F  # always record for transparency
     print("Evaluate NT systems......................")
 
     for neurotrans in [
@@ -437,7 +464,7 @@ def main():
         # Optional: robust hotspot emphasis (Percent mode only; enforced above)
         if args.nt_hotspot_t is not None:
             gtmap_w = _transform_gtmap_robust_sigmoid(
-                gtmap, t=float(args.nt_hotspot_t)
+                gtmap, t=float(args.nt_hotspot_t), name=neurotrans
             ).astype(np.float32)
         else:
             gtmap_w = gtmap
@@ -453,10 +480,15 @@ def main():
                     f"Denominator is zero for {neurotrans} (sum(transformed_gtmap)={denom}). "
                     "This can happen if filtering and/or hotspot transform removed all weight mass."
                 )
-            d[neurotrans] = float(np.sum(nt_weights)) / denom
+            score = float(np.sum(nt_weights)) / denom
+
+            # Optional burden correction: subtract global disconnection fraction F
+            if subtract_F:
+                score = score - F
+
+            d[neurotrans] = score
 
         elif args.NTmaps == "Z":
-            # Hotspot transform is forbidden in Z mode (enforced above).
             d[neurotrans] = float(np.sum(nt_weights))
 
         else:
