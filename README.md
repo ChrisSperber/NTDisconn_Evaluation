@@ -7,6 +7,7 @@ The original authors are credited below and the original license applies.
 Following modifications were introduced
 - new --nt_hotspot_t flag in the Create_NTDisconn.py main pipeline
 - new --subtract_disc_fraction flag in the Create_NTDisconn.py main pipeline
+- various minor additions of safeguards and validations
 - refactoring/cleanup of the Create_NTDisconn.py main function
 - addition of various diagnostic scripts used during the evaluation of the NTDisconn functionality
 
