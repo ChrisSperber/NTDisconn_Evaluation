@@ -1,4 +1,62 @@
-# NTDisconn
+# Modification of NTDisconn
+This repository is a fork of (https://github.com/phjkoch/NTDisconn), commit 9411865.
+It contains customizations for the application of the NTDisconn Tool on a scientific study by the University Hopsital of Bern.
+The original authors are credited below and the original license applies.
+
+## Modifications
+Following modifications were introduced
+- new --nt_hotspot_t flag in the Create_NTDisconn.py main pipeline
+- new --subtract_disc_fraction flag in the Create_NTDisconn.py main pipeline
+- refactoring/cleanup of the Create_NTDisconn.py main function
+- addition of various diagnostic scripts used during the evaluation of the NTDisconn functionality
+
+### --nt_hotspot_t flag
+optional hotspot-emphasizing transform of per-streamline NT weights
+
+If provided, the t value is used as the robust-z threshold in:
+```
+z = (x - median(x)) / (1.4826 * MAD(x))
+w = sigmoid(alpha * (z - t))
+```
+
+Intuition:
+- larger t -> only strong "hotspot" weights remain influential
+- smaller t -> more weights contribute (closer to original behavior)
+
+This transform is only supported in --NTmaps Percent mode (proportion-style output).
+If --NTmaps Z is used together with this option, the script will fail.
+
+### --subtract_disc_fraction flag
+subtract global disconnection burden (F) from each NT percent score
+
+In Percent mode, the base score is:#
+```
+P_k = sum(disconnected * w_k) / sum(w_k)
+```
+where disconnected is the 0/1 streamline disconnection mask.
+
+The global disconnection fraction is:
+```
+F = (# disconnected streamlines) / (total # streamlines)
+```
+If enabled, the script outputs:
+```
+P_k - F
+```
+
+This removes the shared component driven purely by "how many streamlines are disconnected".
+Values can become negative.
+
+## review-clean branch
+An additional branch review-clean has been added that, compared to the original repo, only contains the main functional changes introduced by the
+nt_hotspot_t and subtract_disc_fraction flags
+
+```bash
+git checkout review-clean
+```
+
+## Original Authors and License Information
+
 Create Neurotransmitter Network Damage  
 NTDisconn ©️ 2025 by Philipp J. Koch is licensed under CC BY-NC-SA 4.0  
 [https://creativecommons.org/licenses/by-nc-sa/4.0](https://creativecommons.org/licenses/by-nc-sa/4.0)  
@@ -13,61 +71,3 @@ Please cite the following when using this code
 - Neurotransmitter Density maps:    
 [Hansen et al. 2022](https://pubmed.ncbi.nlm.nih.gov/36303070/) (https://pubmed.ncbi.nlm.nih.gov/36303070/)    
 [Git Repository](https://github.com/netneurolab/hansen_receptors/tree/main) (https://github.com/netneurolab/hansen_receptors/tree/main)    
-
-
-
-1. Required repositories  
-&nbsp;&nbsp;&nbsp;&nbsp;nibabel  
-&nbsp;&nbsp;&nbsp;&nbsp;scipy  
-&nbsp;&nbsp;&nbsp;&nbsp;dipy  
-&nbsp;&nbsp;&nbsp;&nbsp;antspyx  
-&nbsp;&nbsp;&nbsp;&nbsp;pandas  
-&nbsp;&nbsp;&nbsp;&nbsp;alternative: activate the given environment (s. 3.)
-
-3. Clone the repository
-```bash
-git clone https://github.com/phjkoch/NTDisconn.git
-cd NTDisconn
-```
-
-3. Activate Environment
-```bash
-conda env create -f environment.yml
-conda activate ntdisconn
-```
-
-4. Usage
-
-```bash
-python Create_NTDisconn.py --help
-```
-&nbsp;&nbsp;&nbsp;&nbsp;Usage:  
-&nbsp;&nbsp;&nbsp;&nbsp;Create_NTDisconn.py ID in_lesion output_dir  
-
-&nbsp;&nbsp;&nbsp;&nbsp;positional arguments:  
-&nbsp;&nbsp;&nbsp;&nbsp;ID:                    Subject ID  
-&nbsp;&nbsp;&nbsp;&nbsp;in_lesion:             Input individual Lesionmask in MNI152 (1mm iso)  
-&nbsp;&nbsp;&nbsp;&nbsp;output_dir:            Specify output directory
-
-&nbsp;&nbsp;&nbsp;&nbsp;optional arguments:  
-&nbsp;&nbsp;&nbsp;-h, --help            show this help message and exit  
-&nbsp;&nbsp;&nbsp;--discStreamlines DISCSTREAMLINES
-                    Create disconnected streamline output? [y|n] (default: y)  
-&nbsp;&nbsp;&nbsp;--NTmaps MAPS
-                    Choose which NT maps to use (Z-values vs. Percentage)? [Z|Percent] (default: Percent)                    
-
-5. Output  
-&nbsp;&nbsp;&nbsp;In the output_dir a directory named after the ID is created containing  
-&nbsp;&nbsp;&nbsp;1. A csv file with the estimated Neurotransmitter network damage of the individual lesion map for all the Neurotransmitter receptors and transporters from Hansen et al. 2022  
-&nbsp;&nbsp;&nbsp;2. A txt file with 2 millionen entries indicating which streamlines of the HCP-aging tractogram is passing through the individual lesion mask [1] and which are sparsed [0] (optional)
-
-
-6. Test_MNI_lesion.nii.gz
-This is a test lesion when used correctly like:
-```bash
-python Create_NTDisconn.py Test Test_MNI_lesion.nii.gz output_test
-```
-
-Creates the individual Neurotransmitter network damage:
-
-
